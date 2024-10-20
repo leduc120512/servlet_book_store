@@ -65,12 +65,18 @@ public class LoginServlet extends HttpServlet {
                 String address = rs.getString("address");
                 String phone = rs.getString("phone");
 
-                List<Order> orderHistory = getOrderHistory(conn, userId);
+                List<Order> Ordershipped = getOrdershipped(conn, userId);
                 List<CartItem> cartItems = getCartItems(conn, userId);
+                List<Order> orderHistory = getOrderHistory(conn, userId);
+
+                // Lấy danh sách đơn hàng "pending"
+                List<Order> pendingOrders = getOrderPending(conn, userId); // Gọi phương thức getOrderPending
+
+                // Lấy giỏ hàng
 
                 response.setStatus(HttpServletResponse.SC_OK);
                 UserWithOrders user = new UserWithOrders(userId, nameUser, email, role, img, usernameFromDb, address,
-                        orderHistory, cartItems, phone);
+                        orderHistory, cartItems, pendingOrders, Ordershipped, phone);
                 String userJson = gson.toJson(user);
                 response.setContentType("application/json");
                 response.getWriter().write(userJson);
@@ -84,6 +90,7 @@ public class LoginServlet extends HttpServlet {
         }
     }
 
+    // cart
     private List<CartItem> getCartItems(Connection conn, int userId) throws SQLException {
         String query = "SELECT " +
                 "ci.product_id, " +
@@ -115,14 +122,31 @@ public class LoginServlet extends HttpServlet {
         return cartItemList;
     }
 
+    // history
     private List<Order> getOrderHistory(Connection conn, int userId) throws SQLException {
-        String query = "SELECT o.order_id, o.date_order, o.total_price, o.status, o.shipping_address, "
-                + "oi.quantity, oi.price, p.product_id, p.image, p.name AS product_name, categories.category_name "
-                + "FROM orders o "
-                + "JOIN order_items oi ON o.order_id = oi.order_id "
-                + "JOIN products p ON oi.product_id = p.product_id "
-                + "JOIN categories ON p.category_id = categories.category_id "
-                + "WHERE o.user_id = ? AND o.status = 'pending'";
+
+        String query = "SELECT "
+                + "o.order_id, "
+                + "o.date_order, "
+                + "o.total_price, "
+                + "o.status, "
+                + "o.shipping_address, "
+                + "oi.quantity, "
+                + "oi.price, "
+                + "p.product_id, "
+                + "p.image, "
+                + "p.name AS product_name, "
+                + "categories.category_name "
+                + "FROM "
+                + "orders o "
+                + "JOIN "
+                + "order_items oi ON o.order_id = oi.order_id "
+                + "JOIN "
+                + "products p ON oi.product_id = p.product_id "
+                + "JOIN "
+                + "categories ON p.category_id = categories.category_id "
+                + "WHERE "
+                + "o.user_id = ? AND o.status = 'completed'";
 
         PreparedStatement stmt = conn.prepareStatement(query);
         stmt.setInt(1, userId);
@@ -168,6 +192,146 @@ public class LoginServlet extends HttpServlet {
         return orderList;
     }
 
+    // pedding
+    private List<Order> getOrderPending(Connection conn, int userId) throws SQLException {
+  
+
+                String query = "SELECT "
+                + "o.order_id, "
+                + "o.date_order, "
+                + "o.total_price, "
+                + "o.status, "
+                + "o.shipping_address, "
+                + "oi.quantity, "
+                + "oi.price, "
+                + "p.product_id, "
+                + "p.image, "
+                + "p.name AS product_name, "
+                + "categories.category_name "
+                + "FROM "
+                + "orders o "
+                + "JOIN "
+                + "order_items oi ON o.order_id = oi.order_id "
+                + "JOIN "
+                + "products p ON oi.product_id = p.product_id "
+                + "JOIN "
+                + "categories ON p.category_id = categories.category_id "
+                + "WHERE "
+                + "o.user_id = ? AND o.status = 'pending'";
+        PreparedStatement stmt = conn.prepareStatement(query);
+        stmt.setInt(1, userId);
+        ResultSet rs = stmt.executeQuery();
+
+        List<Order> orderList = new ArrayList<>();
+        Order currentOrder = null;
+        List<OrderItem> orderItems = new ArrayList<>();
+
+        while (rs.next()) {
+            int orderId = rs.getInt("order_id");
+
+            if (currentOrder == null || currentOrder.orderId != orderId) {
+                if (currentOrder != null) {
+                    currentOrder.items = new ArrayList<>(orderItems);
+                    orderList.add(currentOrder);
+                }
+                currentOrder = new Order(
+                        orderId,
+                        rs.getString("date_order"),
+                        rs.getDouble("total_price"),
+                        rs.getString("status"),
+                        rs.getString("shipping_address"),
+                        new ArrayList<OrderItem>());
+                orderItems.clear();
+            }
+
+            orderItems.add(new OrderItem(
+                    rs.getInt("product_id"),
+                    rs.getString("product_name"),
+                    rs.getInt("quantity"),
+                    rs.getDouble("price"),
+                    rs.getString("category_name"),
+                    rs.getString("image")));
+        }
+
+        if (currentOrder != null) {
+            currentOrder.items = new ArrayList<>(orderItems);
+            orderList.add(currentOrder);
+        }
+
+        return orderList;
+    }
+
+    // cancel
+
+    // shipped
+    private List<Order> getOrdershipped(Connection conn, int userId) throws SQLException {
+// Corrected spelling to 'pending'
+
+                String query = "SELECT "
+                + "o.order_id, "
+                + "o.date_order, "
+                + "o.total_price, "
+                + "o.status, "
+                + "o.shipping_address, "
+                + "oi.quantity, "
+                + "oi.price, "
+                + "p.product_id, "
+                + "p.image, "
+                + "p.name AS product_name, "
+                + "categories.category_name "
+                + "FROM "
+                + "orders o "
+                + "JOIN "
+                + "order_items oi ON o.order_id = oi.order_id "
+                + "JOIN "
+                + "products p ON oi.product_id = p.product_id "
+                + "JOIN "
+                + "categories ON p.category_id = categories.category_id "
+                + "WHERE "
+                + "o.user_id = ? AND o.status = 'shipped'";
+        PreparedStatement stmt = conn.prepareStatement(query);
+        stmt.setInt(1, userId);
+        ResultSet rs = stmt.executeQuery();
+
+        List<Order> orderList = new ArrayList<>();
+        Order currentOrder = null;
+        List<OrderItem> orderItems = new ArrayList<>();
+
+        while (rs.next()) {
+            int orderId = rs.getInt("order_id");
+
+            if (currentOrder == null || currentOrder.orderId != orderId) {
+                if (currentOrder != null) {
+                    currentOrder.items = new ArrayList<>(orderItems);
+                    orderList.add(currentOrder);
+                }
+                currentOrder = new Order(
+                        orderId,
+                        rs.getString("date_order"),
+                        rs.getDouble("total_price"),
+                        rs.getString("status"),
+                        rs.getString("shipping_address"),
+                        new ArrayList<OrderItem>());
+                orderItems.clear();
+            }
+
+            orderItems.add(new OrderItem(
+                    rs.getInt("product_id"),
+                    rs.getString("product_name"),
+                    rs.getInt("quantity"),
+                    rs.getDouble("price"),
+                    rs.getString("category_name"),
+                    rs.getString("image")));
+        }
+
+        if (currentOrder != null) {
+            currentOrder.items = new ArrayList<>(orderItems);
+            orderList.add(currentOrder);
+        }
+
+        return orderList;
+    }
+
     private void setCORSHeaders(HttpServletResponse response) {
         response.setHeader("Access-Control-Allow-Origin", "http://localhost:3001");
         response.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
@@ -190,6 +354,7 @@ public class LoginServlet extends HttpServlet {
     }
 
     class UserWithOrders {
+
         private int userId;
         private String nameUser;
         private String email;
@@ -197,13 +362,17 @@ public class LoginServlet extends HttpServlet {
         private String img;
         private String username;
         private List<Order> orders;
+        private List<Order> pendingOrders;
+
+        private List<Order> getOrdershipped;
         private List<CartItem> cartItems;
         private String address;
         private String phone;
 
         public UserWithOrders(int userId, String nameUser, String email, String role, String img, String username,
                 String address,
-                List<Order> orders, List<CartItem> cartItems, String phone) {
+                List<Order> orders, List<CartItem> cartItems, List<Order> pendingOrders,
+                List<Order> getOrdershipped, String phone) {
             this.userId = userId;
             this.nameUser = nameUser;
             this.email = email;
@@ -213,6 +382,9 @@ public class LoginServlet extends HttpServlet {
             this.address = address;
             this.orders = orders;
             this.cartItems = cartItems;
+            this.pendingOrders = pendingOrders;
+            this.getOrdershipped = getOrdershipped;
+
             this.phone = phone;
         }
     }
@@ -254,6 +426,30 @@ public class LoginServlet extends HttpServlet {
             this.price = price;
             this.categoryName = categoryName;
             this.image = image;
+        }
+
+        public int getProductId() {
+            return productId;
+        }
+
+        public String getProductName() {
+            return productName;
+        }
+
+        public int getQuantity() {
+            return quantity;
+        }
+
+        public double getPrice() {
+            return price;
+        }
+
+        public String getCategoryName() {
+            return categoryName;
+        }
+
+        public String getImage() {
+            return image;
         }
     }
 
